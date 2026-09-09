@@ -1,11 +1,23 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>学生首页</title>
 </head>
 <body>
-<h3>学生首页</h3>
-<a href="/logout">退出登录</a>
+<h3>活动列表</h3>
+<div th:if="${msg}" th:text="${msg}"></div>
+<table border="1">
+    <tr><th>活动名称</th><th>剩余名额</th><th>操作</th></tr>
+    <tr th:each="a : ${list}">
+        <td th:text="${a.title}"></td>
+        <td th:text="${a.remain} + '/' + ${a.total}"></td>
+        <td>
+            <a th:if="${!enrolledIds.contains(a.id)}" th:href="@{/activity/enroll/{id}(id=${a.id})}">报名</a>
+            <a th:if="${enrolledIds.contains(a.id)}" th:href="@{/activity/cancel/{id}(id=${a.id})}">取消报名</a>
+        </td>
+    </tr>
+</table>
+<br><a href="/logout">退出</a>
 </body>
 </html>

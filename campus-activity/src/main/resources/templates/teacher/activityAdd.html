@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>发布活动</title>
+</head>
+<body>
+<h3>发布活动</h3>
+<form th:action="@{/teacher/activity/save}" method="post">
+    <p>活动名称：<input name="title" required></p>
+    <p>总名额：<input type="number" name="total" required min="1"></p>
+    <button type="submit">发布</button>
+</form>
+<br><a href="/teacher/dashboard">返回</a>
+</body>
+</html>

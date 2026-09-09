@@ -1,11 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>教师后台</title>
 </head>
 <body>
-<h3>教师管理后台</h3>
-<a href="/logout">退出登录</a>
+<h3>我的活动</h3>
+<a href="/teacher/activity/add">发布活动</a>
+<br><br>
+<table border="1">
+    <tr><th>活动名称</th><th>名额</th><th>状态</th><th>操作</th></tr>
+    <tr th:each="a : ${list}">
+        <td th:text="${a.title}"></td>
+        <td th:text="${a.remain} + '/' + ${a.total}"></td>
+        <td th:text="${a.status == 1 ? '上架' : '下架'}"></td>
+        <td>
+            <a th:if="${a.status == 0}" th:href="@{/teacher/activity/online/{id}(id=${a.id})}">上架</a>
+            <a th:if="${a.status == 1}" th:href="@{/teacher/activity/offline/{id}(id=${a.id})}">下架</a>
+        </td>
+    </tr>
+</table>
+<br><a href="/logout">退出</a>
 </body>
 </html>
