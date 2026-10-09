@@ -8,13 +8,18 @@
 <h3>活动列表</h3>
 <div th:if="${msg}" th:text="${msg}"></div>
 <table border="1">
-    <tr><th>活动名称</th><th>剩余名额</th><th>操作</th></tr>
+    <tr><th>活动名称</th><th>剩余名额</th><th>我的状态</th><th>操作</th></tr>
     <tr th:each="a : ${list}">
         <td th:text="${a.title}"></td>
         <td th:text="${a.remain} + '/' + ${a.total}"></td>
         <td>
-            <a th:if="${!enrolledIds.contains(a.id)}" th:href="@{/activity/enroll/{id}(id=${a.id})}">报名</a>
-            <a th:if="${enrolledIds.contains(a.id)}" th:href="@{/activity/cancel/{id}(id=${a.id})}">取消报名</a>
+            <span th:if="${enrollStatusMap[a.id] != null && enrollStatusMap[a.id] == 0}" style="color:green">正式报名</span>
+            <span th:if="${enrollStatusMap[a.id] != null && enrollStatusMap[a.id] == 1}" style="color:orange">候补排队中</span>
+            <span th:if="${enrollStatusMap[a.id] == null}">未报名</span>
+        </td>
+        <td>
+            <a th:if="${enrollStatusMap[a.id] == null}" th:href="@{/activity/enroll/{id}(id=${a.id})}">报名/候补</a>
+            <a th:if="${enrollStatusMap[a.id] != null}" th:href="@{/activity/cancel/{id}(id=${a.id})}">取消报名/候补</a>
         </td>
     </tr>
 </table>

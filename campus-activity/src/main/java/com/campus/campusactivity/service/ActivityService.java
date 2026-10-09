@@ -7,10 +7,16 @@ import com.campus.campusactivity.repository.EnrollmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class ActivityService {
+
+    // 状态常量
+    private static final int STATUS_OFFICIAL = 0;  // 正式报名
+    private static final int STATUS_WAIT = 1;       // 候补报名
+    private static final int STATUS_CANCEL = 2;     // 已取消
 
     @Autowired
     private ActivityRepository activityRepository;
@@ -53,50 +59,78 @@ public class ActivityService {
         }
     }
 
-    // 学生报名
+    // 学生报名/候补
     @Transactional
     public String enroll(Long activityId, Long userId) {
-        if (enrollmentRepository.existsByActivityIdAndUserId(activityId, userId)) {
-            return "已报名该活动";
+        // 校验是否已经报名/候补过
+        if (enrollmentRepository.existsByActivityIdAndUserIdAndStatusNot(activityId, userId, STATUS_CANCEL)) {
+            return "您已报名/候补过该活动";
         }
         Activity activity = activityRepository.findById(activityId).orElse(null);
         if (activity == null || activity.getStatus() == 0) {
             return "活动不存在或已下架";
         }
-        if (activity.getRemain() <= 0) {
-            return "名额已满";
-        }
-        activity.setRemain(activity.getRemain() - 1);
-        activityRepository.save(activity);
-
         Enrollment enrollment = new Enrollment();
         enrollment.setActivityId(activityId);
         enrollment.setUserId(userId);
-        enrollmentRepository.save(enrollment);
-        return "报名成功";
+
+        if (activity.getRemain() > 0) {
+            // 有名额：正式报名
+            activity.setRemain(activity.getRemain() - 1);
+            activityRepository.save(activity);
+            enrollment.setStatus(STATUS_OFFICIAL);
+            enrollmentRepository.save(enrollment);
+            return "报名成功";
+        } else {
+            // 满员：加入候补队列
+            enrollment.setStatus(STATUS_WAIT);
+            enrollment.setWaitTime(LocalDateTime.now());
+            enrollmentRepository.save(enrollment);
+            // 计算当前候补排位
+            int waitRank = enrollmentRepository.findByActivityIdAndStatusOrderByWaitTimeAsc(activityId, STATUS_WAIT).size();
+            return "活动名额已满，已加入候补队列，当前排位第" + waitRank;
+        }
     }
 
-    // 学生取消报名
+    // 学生取消报名/候补
     @Transactional
     public String cancel(Long activityId, Long userId) {
-        Enrollment enrollment = enrollmentRepository.findByActivityIdAndUserId(activityId, userId);
+        Enrollment enrollment = enrollmentRepository.findByActivityIdAndUserIdAndStatusNot(activityId, userId, STATUS_CANCEL);
         if (enrollment == null) {
-            return "未报名该活动";
+            return "未报名/候补该活动";
         }
         Activity activity = activityRepository.findById(activityId).orElse(null);
-        if (activity != null) {
+        // 把当前记录标记为已取消
+        enrollment.setStatus(STATUS_CANCEL);
+        enrollmentRepository.save(enrollment);
+
+        // 如果是正式报名取消，释放名额并触发候补补位
+        if (activity != null && enrollment.getStatus() != STATUS_WAIT) {
             activity.setRemain(activity.getRemain() + 1);
+            // 自动顺位补位：找最早的候补
+            List<Enrollment> waitList = enrollmentRepository.findByActivityIdAndStatusOrderByWaitTimeAsc(activityId, STATUS_WAIT);
+            if (!waitList.isEmpty()) {
+                Enrollment firstWait = waitList.get(0);
+                firstWait.setStatus(STATUS_OFFICIAL);
+                enrollmentRepository.save(firstWait);
+                activity.setRemain(activity.getRemain() - 1);
+            }
             activityRepository.save(activity);
         }
-        enrollmentRepository.delete(enrollment);
         return "取消成功";
     }
 
-    // 查学生已报名的活动ID
+    // 查学生已正式报名的活动ID（用于页面按钮判断）
     public List<Long> listEnrolledIds(Long userId) {
-        return enrollmentRepository.findByUserId(userId)
+        return enrollmentRepository.findByUserIdAndStatusNot(userId, STATUS_CANCEL)
                 .stream()
+                .filter(e -> e.getStatus() == STATUS_OFFICIAL)
                 .map(Enrollment::getActivityId)
                 .toList();
+    }
+
+    // 查学生所有未取消的报名/候补记录（用于页面展示状态）
+    public List<Enrollment> listMyEnrollments(Long userId) {
+        return enrollmentRepository.findByUserIdAndStatusNot(userId, STATUS_CANCEL);
     }
 }

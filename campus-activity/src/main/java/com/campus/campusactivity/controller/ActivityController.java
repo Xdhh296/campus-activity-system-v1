@@ -1,6 +1,7 @@
 package com.campus.campusactivity.controller;
 
 import com.campus.campusactivity.entity.Activity;
+import com.campus.campusactivity.entity.Enrollment;
 import com.campus.campusactivity.entity.User;
 import com.campus.campusactivity.service.ActivityService;
 import jakarta.servlet.http.HttpSession;
@@ -10,6 +11,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class ActivityController {
@@ -25,8 +28,14 @@ public class ActivityController {
 
         List<Activity> list = activityService.listOnline();
         List<Long> enrolledIds = activityService.listEnrolledIds(user.getId());
+        // 查询用户所有报名/候补记录，构建<活动ID, 报名状态>的映射
+        List<Enrollment> myEnrolls = activityService.listMyEnrollments(user.getId());
+        Map<Long, Integer> enrollStatusMap = myEnrolls.stream()
+                .collect(Collectors.toMap(Enrollment::getActivityId, Enrollment::getStatus));
+
         model.addAttribute("list", list);
         model.addAttribute("enrolledIds", enrolledIds);
+        model.addAttribute("enrollStatusMap", enrollStatusMap);
         return "index";
     }
 
