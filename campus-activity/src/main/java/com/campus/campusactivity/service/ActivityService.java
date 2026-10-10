@@ -45,22 +45,26 @@ public class ActivityService {
         activityRepository.save(activity);
     }
 
-    // 上架活动
-    public void online(Long id) {
+    // 上架活动（仅活动创建者可操作）
+    public boolean online(Long id, Long currentTeacherId) {
         Activity activity = activityRepository.findById(id).orElse(null);
-        if (activity != null) {
-            activity.setStatus(1);
-            activityRepository.save(activity);
+        if (activity == null || !activity.getTeacherId().equals(currentTeacherId)) {
+            return false;
         }
+        activity.setStatus(1);
+        activityRepository.save(activity);
+        return true;
     }
 
-    // 下架活动
-    public void offline(Long id) {
+    // 下架活动（仅活动创建者可操作）
+    public boolean offline(Long id, Long currentTeacherId) {
         Activity activity = activityRepository.findById(id).orElse(null);
-        if (activity != null) {
-            activity.setStatus(0);
-            activityRepository.save(activity);
+        if (activity == null || !activity.getTeacherId().equals(currentTeacherId)) {
+            return false;
         }
+        activity.setStatus(0);
+        activityRepository.save(activity);
+        return true;
     }
 
     // 学生报名/候补

@@ -20,15 +20,22 @@ public class ActivityController {
     @Autowired
     private ActivityService activityService;
 
-    // ========== 学生端 ==========
+    // 统一角色跳转工具：根据用户角色跳到对应首页
+    private String getHomeByRole(User user) {
+        if ("teacher".equals(user.getRole())) return "redirect:/teacher/dashboard";
+        if ("admin".equals(user.getRole())) return "redirect:/admin/dashboard";
+        return "redirect:/index";
+    }
+
+    // ========== 学生端（仅学生可访问） ==========
     @GetMapping("/index")
     public String index(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loginUser");
         if (user == null) return "redirect:/login";
+        if (!"student".equals(user.getRole())) return getHomeByRole(user);
 
         List<Activity> list = activityService.listOnline();
         List<Long> enrolledIds = activityService.listEnrolledIds(user.getId());
-        // 查询用户所有报名/候补记录，构建<活动ID, 报名状态>的映射
         List<Enrollment> myEnrolls = activityService.listMyEnrollments(user.getId());
         Map<Long, Integer> enrollStatusMap = myEnrolls.stream()
                 .collect(Collectors.toMap(Enrollment::getActivityId, Enrollment::getStatus));
@@ -43,6 +50,7 @@ public class ActivityController {
     public String enroll(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
         User user = (User) session.getAttribute("loginUser");
         if (user == null) return "redirect:/login";
+        if (!"student".equals(user.getRole())) return getHomeByRole(user);
 
         String msg = activityService.enroll(id, user.getId());
         ra.addFlashAttribute("msg", msg);
@@ -53,17 +61,19 @@ public class ActivityController {
     public String cancel(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
         User user = (User) session.getAttribute("loginUser");
         if (user == null) return "redirect:/login";
+        if (!"student".equals(user.getRole())) return getHomeByRole(user);
 
         String msg = activityService.cancel(id, user.getId());
         ra.addFlashAttribute("msg", msg);
         return "redirect:/index";
     }
 
-    // ========== 教师端 ==========
+    // ========== 教师端（仅教师可访问） ==========
     @GetMapping("/teacher/dashboard")
     public String teacherDashboard(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loginUser");
-        if (user == null || !"teacher".equals(user.getRole())) return "redirect:/login";
+        if (user == null) return "redirect:/login";
+        if (!"teacher".equals(user.getRole())) return getHomeByRole(user);
 
         List<Activity> list = activityService.listByTeacher(user.getId());
         model.addAttribute("list", list);
@@ -73,34 +83,40 @@ public class ActivityController {
     @GetMapping("/teacher/activity/add")
     public String toAdd(HttpSession session) {
         User user = (User) session.getAttribute("loginUser");
-        if (user == null || !"teacher".equals(user.getRole())) return "redirect:/login";
+        if (user == null) return "redirect:/login";
+        if (!"teacher".equals(user.getRole())) return getHomeByRole(user);
         return "teacher/activityAdd";
     }
 
     @PostMapping("/teacher/activity/save")
     public String save(Activity activity, HttpSession session) {
         User user = (User) session.getAttribute("loginUser");
-        if (user == null || !"teacher".equals(user.getRole())) return "redirect:/login";
+        if (user == null) return "redirect:/login";
+        if (!"teacher".equals(user.getRole())) return getHomeByRole(user);
 
         activityService.addActivity(activity, user.getId());
         return "redirect:/teacher/dashboard";
     }
 
     @GetMapping("/teacher/activity/online/{id}")
-    public String online(@PathVariable Long id, HttpSession session) {
+    public String online(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
         User user = (User) session.getAttribute("loginUser");
-        if (user == null || !"teacher".equals(user.getRole())) return "redirect:/login";
+        if (user == null) return "redirect:/login";
+        if (!"teacher".equals(user.getRole())) return getHomeByRole(user);
 
-        activityService.online(id);
+        boolean success = activityService.online(id, user.getId());
+        if (!success) ra.addFlashAttribute("msg", "无权操作他人活动");
         return "redirect:/teacher/dashboard";
     }
 
     @GetMapping("/teacher/activity/offline/{id}")
-    public String offline(@PathVariable Long id, HttpSession session) {
+    public String offline(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
         User user = (User) session.getAttribute("loginUser");
-        if (user == null || !"teacher".equals(user.getRole())) return "redirect:/login";
+        if (user == null) return "redirect:/login";
+        if (!"teacher".equals(user.getRole())) return getHomeByRole(user);
 
-        activityService.offline(id);
+        boolean success = activityService.offline(id, user.getId());
+        if (!success) ra.addFlashAttribute("msg", "无权操作他人活动");
         return "redirect:/teacher/dashboard";
     }
 }
