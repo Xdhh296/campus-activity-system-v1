@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>管理员账号管理</title>
+</head>
+<body>
+<h3>学生账号管理</h3>
+<table border="1">
+    <tr><th>账号</th><th>姓名</th><th>账号状态</th><th>操作</th></tr>
+    <tr th:each="s : ${students}">
+        <td th:text="${s.username}"></td>
+        <td th:text="${s.name}"></td>
+        <td>
+            <span th:if="${s.accountStatus == 1}" style="color:green">正常</span>
+            <span th:if="${s.accountStatus == 0}" style="color:red">已停用</span>
+        </td>
+        <td>
+            <a th:if="${s.accountStatus == 1}" th:href="@{/admin/user/updateStatus/{id}/{status}(id=${s.id}, status=0)}" style="color:red">停用账号</a>
+            <a th:if="${s.accountStatus == 0}" th:href="@{/admin/user/updateStatus/{id}/{status}(id=${s.id}, status=1)}" style="color:green">恢复账号</a>
+        </td>
+    </tr>
+</table>
+<br><a href="/logout">退出</a>
+</body>
+</html>
