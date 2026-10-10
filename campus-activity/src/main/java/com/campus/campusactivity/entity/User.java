@@ -26,11 +26,15 @@ public class User {
     private String studentId;
     private String teacherId;
 
+    // 账号状态：1=正常 0=停用
+    private Integer accountStatus = 1;
+
     private LocalDateTime createTime;
 
     @PrePersist
     public void prePersist() {
         createTime = LocalDateTime.now();
+        if (accountStatus == null) accountStatus = 1;
     }
 
     public Long getId() { return id; }
@@ -47,6 +51,8 @@ public class User {
     public void setStudentId(String studentId) { this.studentId = studentId; }
     public String getTeacherId() { return teacherId; }
     public void setTeacherId(String teacherId) { this.teacherId = teacherId; }
+    public Integer getAccountStatus() { return accountStatus; }
+    public void setAccountStatus(Integer accountStatus) { this.accountStatus = accountStatus; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
 }

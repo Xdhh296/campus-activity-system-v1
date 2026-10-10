@@ -5,6 +5,7 @@ import com.campus.campusactivity.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class UserService {
@@ -37,10 +38,28 @@ public class UserService {
         if (user == null) {
             return null;
         }
+        // 账号被停用，禁止登录
+        if (user.getAccountStatus() != null && user.getAccountStatus() == 0) {
+            return null;
+        }
         // 比对加密后的密码
         if (passwordEncoder.matches(password, user.getPassword())) {
             return user;
         }
         return null;
+    }
+
+    // 管理员：查询所有学生账号
+    public List<User> listStudents() {
+        return userRepository.findByRole("student");
+    }
+
+    // 管理员：停用/恢复账号
+    public void updateAccountStatus(Long userId, Integer status) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            user.setAccountStatus(status);
+            userRepository.save(user);
+        }
     }
 }

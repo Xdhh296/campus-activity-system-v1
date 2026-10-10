@@ -2,8 +2,10 @@ package com.campus.campusactivity.service;
 
 import com.campus.campusactivity.entity.Activity;
 import com.campus.campusactivity.entity.Enrollment;
+import com.campus.campusactivity.entity.User;
 import com.campus.campusactivity.repository.ActivityRepository;
 import com.campus.campusactivity.repository.EnrollmentRepository;
+import com.campus.campusactivity.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ public class ActivityService {
     private ActivityRepository activityRepository;
     @Autowired
     private EnrollmentRepository enrollmentRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     // 学生：查所有上架活动
     public List<Activity> listOnline() {
@@ -62,6 +66,11 @@ public class ActivityService {
     // 学生报名/候补
     @Transactional
     public String enroll(Long activityId, Long userId) {
+        // 前置校验：账号是否被停用
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null && user.getAccountStatus() != null && user.getAccountStatus() == 0) {
+            return "账号状态异常，暂无法报名";
+        }
         // 校验是否已经报名/候补过
         if (enrollmentRepository.existsByActivityIdAndUserIdAndStatusNot(activityId, userId, STATUS_CANCEL)) {
             return "您已报名/候补过该活动";
@@ -99,13 +108,15 @@ public class ActivityService {
         if (enrollment == null) {
             return "未报名/候补该活动";
         }
+        // 先记录原来的报名状态（正式/候补）
+        Integer oldStatus = enrollment.getStatus();
         Activity activity = activityRepository.findById(activityId).orElse(null);
         // 把当前记录标记为已取消
         enrollment.setStatus(STATUS_CANCEL);
         enrollmentRepository.save(enrollment);
 
-        // 如果是正式报名取消，释放名额并触发候补补位
-        if (activity != null && enrollment.getStatus() != STATUS_WAIT) {
+        // 只有取消正式报名时，才释放名额并触发候补补位
+        if (activity != null && oldStatus == STATUS_OFFICIAL) {
             activity.setRemain(activity.getRemain() + 1);
             // 自动顺位补位：找最早的候补
             List<Enrollment> waitList = enrollmentRepository.findByActivityIdAndStatusOrderByWaitTimeAsc(activityId, STATUS_WAIT);

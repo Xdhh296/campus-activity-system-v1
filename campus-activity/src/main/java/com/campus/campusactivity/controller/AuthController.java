@@ -54,6 +54,8 @@ public class AuthController {
         // 按角色跳转不同首页
         if ("teacher".equals(user.getRole())) {
             return "redirect:/teacher/dashboard";
+        } else if ("admin".equals(user.getRole())) {
+            return "redirect:/admin/dashboard";
         } else {
             return "redirect:/index";
         }
